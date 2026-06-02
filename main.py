@@ -239,13 +239,12 @@ def main():
     mat_path = "DH_FR1.mat"
 
     data = sio.loadmat(mat_path, squeeze_me=False)
-
-    BS_positions = get_anchor_positions(data)
+    BS_positions = np.asarray(data['BS_positions'], dtype=float)
     d_hat = np.asarray(data["d_hat"], dtype=float)
+    p = np.asarray(data['p'], dtype=float)
 
     num_user = d_hat.shape[1]
     p_hat = np.zeros((2, num_user))
-
     for u in range(num_user):
         p_hat[:, u] = your_algorithm(d_hat[:, u], BS_positions)
 
@@ -253,8 +252,10 @@ def main():
 
 
 if __name__ == "__main__":
-    p_hat = main()
+    main()
 
+    """
+    p_hat = main()
     data = sio.loadmat("DH_FR1.mat", squeeze_me=False)
     model_bundle = load_model_once()
 
@@ -321,3 +322,4 @@ if __name__ == "__main__":
         print("Ground truth p not found.")
         print("Only p_hat prediction was generated.")
         print("=============================================")
+    """
