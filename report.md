@@ -1,4 +1,7 @@
-# ASD-Loc Inspired Candidate-Selected ML Residual Correction with Anchor Spatial Features
+# ASD-Loc Inspired Hybrid Localization
+
+학번: 12233992  
+이름: 이성수
 
 ## 1. 모티베이션 & 인트로
 
@@ -149,6 +152,16 @@ ML 사용 학생은 학습된 모델 파일을 제출해야 하므로, 최종 �
 | Candidate-selected model selection | 여러 tree ensemble 후보를 동일한 400/300 split에서 비교하여 internal test 평균 오차가 가장 낮은 모델 선택 |
 | Hidden test 대응 구조 | main.py에서 학습을 수행하지 않고, model.pkl을 load하여 d_hat.shape[1] 기준으로 모든 사용자 수에 대응 |
 
+### 기존 연구와의 차별성
+
+기존 Random Forest 기반 위치추정 연구는 RTT 또는 RSSI와 같은 측정값을 입력으로 하여 위치 좌표를 직접 예측하는 Direct Localization 구조를 사용하는 경우가 많다. 이러한 방식은 충분한 학습 데이터가 확보되면 높은 성능을 기대할 수 있지만, 물리적 거리 모델을 활용하지 못하며 학습 데이터에 대한 의존성이 높다는 한계가 있다.
+
+반면 본 프로젝트에서는 RTT 거리 정보와 기지국 좌표를 이용하여 Robust Trilateration 기반의 초기 위치 p_base를 먼저 계산한 후, Random Forest가 위치 좌표 자체가 아닌 p_true - p_base residual만 학습하도록 구성하였다. 따라서 머신러닝 모델이 위치 추정을 처음부터 수행하는 것이 아니라, 물리 기반 위치추정 과정에서 반복적으로 발생하는 오차만 보정하도록 역할을 제한하였다.
+
+또한 기말 프로젝트 준비 과정에서는 ASD-Loc 계열의 신뢰도 기반 위치추정 아이디어를 검토하였다. ASD-Loc 계열 접근법은 센서별 신뢰도를 고려하여 위치를 추정한다는 특징을 가진다. 본 프로젝트에서는 해당 아이디어를 그대로 구현하지 않고, 거리 기반 가중치와 residual 기반 가중치를 결합한 robust weighted trilateration 구조로 재구성하였다. 여기에 anchor spatial feature와 machine learning 기반 residual correction을 추가하여 최종 알고리즘을 설계하였다.
+
+즉, 본 프로젝트의 차별점은 단순 Trilateration도 아니고, RTT를 직접 좌표로 변환하는 순수 Machine Learning 방식도 아닌, 물리 기반 위치추정과 Machine Learning 기반 오차 보정을 결합한 Hybrid Residual Correction 구조를 구현한 점에 있다.
+
 ## 3. Agent AI 활용 방안
 
 본 프로젝트에서는 Agent AI를 알고리즘 아이디어 탐색, 코드 구조 정리, 오류 원인 분석, 실험 결과 해석 보조 도구로 활용하였다. 단, 최종 알고리즘 선택과 성능 판단은 제공 데이터에서 직접 실행한 결과를 기준으로 본인이 결정하였다.
@@ -252,3 +265,25 @@ MLPRegressor 기반 신경망도 실험하였다. 그러나 제공 데이터가 
 | lightweight model 설계 | 성능을 유지하면서 model.pkl 크기와 inference 시간을 줄이는 방향 |
 
 최종적으로 본 알고리즘은 단순 삼변측량 대비 큰 폭의 성능 개선을 보였고, 중간발표에서 도출한 outlier 대응과 residual 기반 센서 신뢰도 아이디어를 최종 데이터셋에 맞게 확장하였다. 특히 DBSCAN-MAD-MCC 흐름에서 얻은 “측정값을 동일하게 신뢰하지 말아야 한다”는 핵심 고찰을 거리 기반 가중치, residual 기반 가중치, anchor spatial feature, ML residual correction으로 재구성하였다. 또한 train.py와 main.py의 역할을 분리하고, main.py에서 학습을 수행하지 않도록 하여 hidden test 및 실행 시간 제한 조건에 맞는 구조로 구현하였다.
+
+## 5. Reference
+
+본 프로젝트의 최종 알고리즘인 ASD-Loc Inspired Candidate-Selected ML Residual Correction with Anchor Spatial Features는 특정 논문이나 기존 알고리즘을 그대로 구현한 것이 아니라, robust optimization, robust statistics, residual learning, machine learning 기반 오차 보정 개념을 과제 데이터 특성에 맞게 조합하여 설계한 방식이다. 아래 자료들은 알고리즘을 설계하는 과정에서 참고한 기반 개념과 구현 도구이다.
+
+| Reference | 기존 연구 또는 문헌에서 제안한 내용 | 본 프로젝트에서 적용한 내용 및 차별점 |
+|---|---|---|
+| SciPy least_squares Documentation | 비선형 최소제곱 문제를 해결하기 위한 최적화 기법과 soft_l1, huber 등의 robust loss를 제공한다. | RTT 거리 기반 위치추정 문제를 nonlinear least squares 형태로 구성하였다. 또한 soft_l1 loss를 적용하여 일부 거리 이상치의 영향을 줄이도록 구현하였다. |
+| Huber, P. J. (1964), Robust Estimation of a Location Parameter | 이상치가 포함된 데이터에서 큰 residual의 영향을 감소시키는 robust estimation 개념을 제안하였다. | Huber 추정기를 직접 구현하지는 않았지만, 거리 오차가 큰 Anchor의 영향을 줄이기 위해 robust loss 기반 위치추정을 수행하였다. |
+| Rousseeuw, P. J. and Croux, C. (1993), Alternatives to the Median Absolute Deviation | MAD를 이용한 이상치에 강한 scale estimation 방법을 제안하였다. | Anchor별 residual 분포를 분석하고 신뢰도 기반 weighting을 설계할 때 robust statistics 개념을 참고하였다. |
+| Breiman, L. (2001), Random Forests | 다수의 Decision Tree를 결합한 Ensemble Learning 기반 회귀 및 분류 기법을 제안하였다. | 위치 좌표를 직접 예측하지 않고, Robust Trilateration 결과의 residual만 학습하여 위치 오차를 보정하는 모델로 활용하였다. |
+| Machine Learning 기반 위치 오차 보정(Residual Correction) 연구들 | 초기 추정 결과의 오차를 별도로 학습하여 보정하는 구조를 사용한다. | 초기 위치 추정값을 그대로 사용하지 않고, Random Forest가 위치 오차를 예측하여 최종 위치를 보정하도록 구성하였다. |
+| 기말 프로젝트 준비 과정에서 검토한 ASD-Loc 계열 신뢰도 기반 위치추정 아이디어 | 센서별 측정 신뢰도를 고려하여 위치추정의 안정성을 향상시키는 접근법을 사용한다. | ASD-Loc 전체 알고리즘을 구현하지는 않았으며, 센서 신뢰도를 다르게 반영한다는 아이디어만 참고하였다. 본 프로젝트에서는 거리 기반 가중치와 residual 기반 가중치를 결합한 robust weighted trilateration을 구성하고, 추가적으로 anchor spatial feature와 ML residual correction을 결합하여 새로운 구조로 재구성하였다. |
+| 과제 제공 데이터셋 DH_FR1.mat 및 실행 규격 | BS_positions, d_hat, p 데이터 구조와 main() 함수 반환 형식을 정의한다. | train.py와 main.py를 분리하고, 최종적으로 (2, num_user) 형태의 위치 추정 결과를 반환하도록 구현하였다. |
+
+### 기존 방법과의 차별점
+
+기존 Trilateration 기반 방법은 RTT 거리 정보만을 이용하여 직접 위치를 계산하므로 거리 측정 오차에 민감하다. 반면 순수 Machine Learning 기반 방법은 RTT 데이터를 입력으로 사용하여 위치 좌표를 직접 예측하지만, 물리적 거리 모델을 충분히 활용하지 못하고 학습 데이터에 대한 의존성이 높다.
+
+본 프로젝트에서는 두 방법의 장점을 결합한 하이브리드 구조를 적용하였다. 먼저 RTT 거리와 BS 위치를 이용하여 Robust Trilateration 기반 초기 위치를 계산한다. 그 다음 Anchor별 residual을 이용하여 신뢰도를 반영하고, Anchor의 공간적 배치 정보를 Feature로 활용한다. 마지막으로 위치 자체를 예측하는 대신 위치 오차만 학습하고, Random Forest 기반 residual correction을 통해 최종 위치를 보정한다.
+
+즉, 본 연구는 순수 Trilateration 방식도 아니고 RTT를 바로 좌표로 변환하는 Direct Machine Learning 방식도 아닌, 물리 기반 위치 추정과 Machine Learning 기반 오차 보정을 결합한 Hybrid Residual Correction 구조라는 점에서 기존 방법과 차별성을 가진다.
