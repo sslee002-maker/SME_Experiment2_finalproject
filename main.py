@@ -253,7 +253,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
     """
     p_hat = main()
     data = sio.loadmat("DH_FR1.mat", squeeze_me=False)
